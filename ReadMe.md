@@ -26,19 +26,16 @@
 ## 3. 핵심 소스 코드
 
 ### 3.1 MyStableCoin.sol
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+### 3.2 PaymentProcessor.sol
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MyStableCoin is ERC20, Ownable {
-    constructor() ERC20("My Test Stablecoin", "MYST") Ownable(msg.sender) {
-        _mint(msg.sender, 10000 * 10 ** decimals());
-    }
+## 4. 프론트엔드 연동 로직 (JavaScript)
+Ethers.js를 사용하여 메타마스크와 컨트랙트를 연결하는 핵심 비즈니스 로직입니다.
 
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-}
+
+## 5. 실행화면
+<img width="1663" height="931" alt="스크린샷 2026-05-12 173646" src="https://github.com/user-attachments/assets/9fa61cb6-bc26-4f96-a02e-a1b2f977e19d" />
+
+
+## 6. 결론 및 고찰
+본 실습을 통해 단순히 코인을 송금하는 것을 넘어, 스마트 컨트랙트가 사용자의 자산 이동 권한을 위임받아 비즈니스 로직을 수행하는 DApp의 핵심 동작 원리를 이해했습니다. 특히 Approve 단계에서 발생하는 보안적 의미와 TransferFrom을 통한 자동화된 결제 처리 과정을 직접 구현함으로써 블록체인 기반 서비스의 확장성을 확인했습니다.
