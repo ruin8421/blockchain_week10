@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>GIWA 스테이블코인 결제 시스템</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="application/javascript"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background-color: #f4f7f6; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #333; text-align: center; }
+        .status { margin-bottom: 20px; padding: 10px; border-radius: 5px; background: #e8f0fe; font-size: 0.9em; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-connect { background-color: #f6851b; color: white; }
+        .btn-pay { background-color: #28a745; color: white; }
+        #log { font-size: 0.8em; color: #666; margin-top: 20px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>STABLE PAY 💸</h2>
+    <div id="walletStatus" class="status">지갑을 연결해 주세요.</div>
+    
+    <label>상품 가격 (MYST)</label>
+    <input type="number" id="amount" value="10" placeholder="결제할 금액">
+    
+    <button class="btn-connect" onclick="connectWallet()">지갑 연결하기</button>
+    <button class="btn-pay" onclick="handlePayment()">결제하기 (Approve + Pay)</button>
+
+    <div id="log"></div>
+</div>
+
+<script>
+    // ✅ 수정됨: 주소 앞뒤에 따옴표("")를 반드시 붙여야 합니다.
+    const STABLE_COIN_ADDRESS = "0x6dD0070b90ffa6c6f041e6C957AF21e22C959Ca9";
+    const PAYMENT_PROCESSOR_ADDRESS = "0xf5072d996a97F2D3F4D8a0f19fe3247604317B78";
+
+    const ABI = [
+    // ERC20 - MyStableCoin용
+    "function approve(address spender, uint256 amount) public returns (bool)",
+    "function allowance(address owner, address spender) public view returns (uint256)",
+    // PaymentProcessor용
+    "function pay(uint256 amount, uint256 paymentId) external"
+    ];
+
+    let provider, signer;
+
+    window.addEventListener('load', async () => {
+        if (typeof window.ethereum !== 'undefined') {
+            console.log('메타마스크 감지 성공!');
+        } else {
+            console.log('메타마스크를 찾을 수 없습니다.');
+        }
+    });
+
+    console.log("ethers 로드 상태:", typeof ethers);
+
+    async function connectWallet() {
+        try {
+            if (typeof window.ethereum !== 'undefined') {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                const address = await signer.getAddress();
+                document.getElementById('walletStatus').innerText = `연결됨: ${address.substring(0,6)}...${address.substring(38)}`;
+                log("지갑이 성공적으로 연결되었습니다.");
+            } else {
+                alert("메타마스크를 설치해 주세요!");
+            }
+        } catch (err) {
+            log("지갑 연결 중 에러: " + err.message);
+        }
+    }
+
+    async function handlePayment() {
+        if (!signer) return alert("먼저 지갑을 연결하세요!");
+
+        const amountInput = document.getElementById('amount').value;
+        const amount = ethers.utils.parseUnits(amountInput, 18);
+        const paymentId = Math.floor(Math.random() * 1000000);
+
+        try {
+            const tokenContract = new ethers.Contract(STABLE_COIN_ADDRESS, ABI, signer);
+            const paymentContract = new ethers.Contract(PAYMENT_PROCESSOR_ADDRESS, ABI, signer);
+
+            log("1단계: 토큰 사용 승인(Approve) 중...");
+            const approveTx = await tokenContract.approve(PAYMENT_PROCESSOR_ADDRESS, amount);
+            await approveTx.wait();
+            log("승인 완료! 2단계 결제를 진행합니다.");
+
+            log("2단계: 결제 처리(Pay) 중...");
+            const payTx = await paymentContract.pay(amount, paymentId);
+            await payTx.wait();
+            
+            log(`✅ 결제 성공! \n결제 ID: ${paymentId}\n트랜잭션: ${payTx.hash}`);
+            alert("결제가 완료되었습니다!");
+
+        } catch (error) {
+            console.error(error);
+            log("에러 발생: " + error.message);
+        }
+    }
+
+    function log(msg) {
+        const logDiv = document.getElementById('log');
+        logDiv.innerText += "\n> " + msg;
+    }
+</script>
+
+</body>
+</html>
